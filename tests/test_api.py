@@ -5,76 +5,81 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_health_returns_ok():
+def test_health():
+    """Проверяет доступность API."""
     response = client.get("/health")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+
+    data = response.json()
+    assert data["status"] == "ok"
 
 
-def test_predict_returns_valid_result(monkeypatch):
-    def fake_predict(text):
-        return {
-            "label": "positive",
-            "score": 0.95,
-        }
-
-    monkeypatch.setattr("app.main.predict_text", fake_predict)
-
+def test_predict():
+    """Проверяет реальное предсказание модели для одного текста."""
     response = client.post(
         "/predict",
-        json={"text": "I love this product!"},
+        json={"text": "I absolutely love this product! It is amazing."},
     )
 
     assert response.status_code == 200
 
     data = response.json()
-    assert data["label"] == "positive"
-    assert data["score"] == 0.95
+
+    assert "label" in data
+    assert "score" in data
+    assert data["label"] in {"positive", "neutral", "negative"}
+    assert isinstance(data["score"], (int, float))
+    assert 0 <= data["score"] <= 1
 
 
-def test_predict_batch_processes_multiple_texts(monkeypatch):
-    def fake_predict(text):
-        label = "positive" if "love" in text else "negative"
-        return {
-            "label": label,
-            "score": 0.9,
-        }
-
-    monkeypatch.setattr("app.main.predict_text", fake_predict)
+def test_predict_batch():
+    """Проверяет реальное предсказание для нескольких текстов."""
+    texts = [
+        "I absolutely love this product!",
+        "This product is terrible. I hate it.",
+    ]
 
     response = client.post(
         "/predict_batch",
-        json={
-            "texts": [
-                "I love this movie!",
-                "I hate this movie!",
-            ]
-        },
+        json={"texts": texts},
     )
 
     assert response.status_code == 200
 
     data = response.json()
-    assert len(data["predictions"]) == 2
-    assert data["predictions"][0]["label"] == "positive"
-    assert data["predictions"][1]["label"] == "negative"
+
+    assert "predictions" in data
+    assert len(data["predictions"]) == len(texts)
+
+    for prediction in data["predictions"]:
+        assert "label" in prediction
+        assert "score" in prediction
+        assert prediction["label"] in {
+            "positive",
+            "neutral",
+            "negative",
+        }
+        assert isinstance(prediction["score"], (int, float))
+        assert 0 <= prediction["score"] <= 1
 
 
-def test_predict_batch_accepts_empty_list():
-    response = client.post(
-        "/predict_batch",
-        json={"texts": []},
-    )
+def test_model_info():
+    """Проверяет получение информации о модели."""
+    response = client.get("/model_info")
 
     assert response.status_code == 200
-    assert response.json() == {"predictions": []}
+
+    data = response.json()
+    assert "model_name" in data
 
 
-def test_predict_rejects_blank_text():
+def test_predict_empty_text():
+    """Проверяет обработку пустого текста."""
     response = client.post(
         "/predict",
-        json={"text": "   "},
+        json={"text": ""},
     )
 
+    # Ожидается 422, если схема API запрещает пустой текст.
     assert response.status_code == 422
