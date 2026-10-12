@@ -77,8 +77,8 @@ def test_model_info():
 def test_predict_empty_text():
     """Проверяет обработку пустого текста."""
     response = client.post(
-          "/predict",
-          json={"text": "   "},
+        "/predict",
+        json={"text": "   "},
     )
 
     # Ожидается 422, если схема API запрещает пустой текст.
