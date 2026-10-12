@@ -16,7 +16,7 @@ def test_health():
 
 
 def test_predict():
-    """Проверяет реальное предсказание модели для одного текста."""
+    """Проверяет предсказание модели для одного текста."""
     response = client.post(
         "/predict",
         json={"text": "I absolutely love this product! It is amazing."},
@@ -34,7 +34,7 @@ def test_predict():
 
 
 def test_predict_batch():
-    """Проверяет реальное предсказание для нескольких текстов."""
+    """Проверяет предсказание для нескольких текстов."""
     texts = [
         "I absolutely love this product!",
         "This product is terrible. I hate it.",
